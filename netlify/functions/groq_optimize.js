@@ -6,7 +6,26 @@ exports.handler = async (event, context) => {
     const code = body.code || "";
     const language = body.language || "code";
 
-    const prompt = `Optimize the following ${language} code to make it more concise and efficient:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+    const prompt = `
+You are a professional developer.
+
+First, **evaluate** the following ${language} code for:
+1. Code quality
+2. Performance
+3. Readability
+4. Best practices
+
+Then, **optimize** the code to make it more concise and efficient.
+
+Return both:
+- A short evaluation report
+- The optimized version of the code
+
+Code to evaluate:
+\`\`\`${language}
+${code}
+\`\`\`
+`;
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -19,7 +38,7 @@ exports.handler = async (event, context) => {
         messages: [
           {
             role: "system",
-            content: "You are a professional developer who improves code quality, performance, and readability."
+            content: "You are a professional developer who evaluates and improves code quality, performance, and readability."
           },
           {
             role: "user",
@@ -27,7 +46,7 @@ exports.handler = async (event, context) => {
           }
         ],
         temperature: 0.3,
-        max_tokens: 512
+        max_tokens: 1024
       })
     });
 
@@ -35,12 +54,12 @@ exports.handler = async (event, context) => {
 
     console.log("Groq API response:", result);
 
-    const optimized_code = result?.choices?.[0]?.message?.content || "No output received from the model.";
+    const full_response = result?.choices?.[0]?.message?.content || "No output received from the model.";
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ optimized_code })
+      body: JSON.stringify({ evaluation_and_optimization: full_response })
     };
 
   } catch (err) {
