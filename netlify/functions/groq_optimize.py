@@ -4,19 +4,20 @@ def handler(event, context):
     import os
 
     body = json.loads(event["body"])
-    input_code = body.get("code", "")
+    code = body.get("code", "")
+    language = body.get("language", "code")  # default fallback
 
     headers = {
         "Authorization": f"Bearer {os.environ.get('GROQ_API_KEY')}",
         "Content-Type": "application/json"
     }
 
-    prompt = f"Optimize this Python code:\n\n```python\n{input_code}\n```"
+    prompt = f"Optimize this {language} code:\n\n```{language}\n{code}\n```"
 
     payload = {
-        "model": "mixtral-8x7b-32768",  # you can change to other models like llama2-70b-4096
+        "model": "mixtral-8x7b-32768",
         "messages": [
-            {"role": "system", "content": "You are an expert Python developer who writes clean, optimized code."},
+            {"role": "system", "content": "You are a professional developer who improves code quality, performance, and readability."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
