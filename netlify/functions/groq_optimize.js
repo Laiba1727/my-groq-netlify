@@ -15,10 +15,16 @@ exports.handler = async (event, context) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mixtral-8x7b-32768",
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [
-          { role: "system", content: "You are a professional developer who improves code quality, performance, and readability." },
-          { role: "user", content: prompt }
+          {
+            role: "system",
+            content: "You are a professional developer who improves code quality, performance, and readability."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
         ],
         temperature: 0.3,
         max_tokens: 512
@@ -27,10 +33,9 @@ exports.handler = async (event, context) => {
 
     const result = await response.json();
 
-    // Log the full result to inspect the API response
     console.log("Groq API response:", result);
 
-    const optimized_code = result?.choices?.[0]?.message?.content || "";
+    const optimized_code = result?.choices?.[0]?.message?.content || "No output received from the model.";
 
     return {
       statusCode: 200,
@@ -43,8 +48,10 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 500,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: "Something went wrong." })
     };
   }
 };
+
 
