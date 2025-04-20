@@ -8,6 +8,7 @@ exports.handler = async (event, context) => {
 
     const prompt = `Optimize this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\``;
 
+    // Using node-fetch to make the POST request
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -43,14 +44,3 @@ exports.handler = async (event, context) => {
     };
   }
 };
-
-
-    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
-
-    optimized_code = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps({"optimized_code": optimized_code})
-    }
