@@ -7,21 +7,29 @@ exports.handler = async (event, context) => {
     const language = body.language || "code";
 
     const prompt = `
-You are a professional developer.
+You are a professional senior developer.
 
-First, **evaluate** the following ${language} code for:
-1. Code quality
-2. Performance
-3. Readability
-4. Best practices
+Evaluate the following ${language} code based on the following **four categories** and provide a **score from 1 to 10** for each:
 
-Then, **optimize** the code to make it more concise and efficient.
+1. **Code Quality** (e.g., clean, consistent, modular)
+2. **Performance** (e.g., efficiency, speed, resource usage)
+3. **Readability** (e.g., clear naming, structure, comments)
+4. **Best Practices** (e.g., idiomatic code, standards, security)
 
-Return both:
-- A short evaluation report
-- The optimized version of the code
+### Your Response Format:
+- Code Quality: X/10
+- Performance: X/10
+- Readability: X/10
+- Best Practices: X/10
 
-Code to evaluate:
+Then write a short paragraph explaining the evaluation.
+
+After that, **optimize the code** to improve it. The optimized version should be:
+- More concise
+- More efficient
+- Following best practices
+
+### Code to Evaluate:
 \`\`\`${language}
 ${code}
 \`\`\`
@@ -72,5 +80,6 @@ ${code}
     };
   }
 };
+
 
 
