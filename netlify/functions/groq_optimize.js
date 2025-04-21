@@ -5,29 +5,56 @@ exports.handler = async (event, context) => {
     const body = JSON.parse(event.body);
     const code = body.code || "";
     const language = body.language || "code";
-
     const prompt = `
 You are a professional senior developer.
 
-Evaluate the following ${language} code based on the following **four categories** and provide a **score from 1 to 10** for each:
+Evaluate the following ${language} code thoroughly and provide a structured **Evaluation Report** as follows:
 
-1. **Code Quality** (e.g., clean, consistent, modular)
-2. **Performance** (e.g., efficiency, speed, resource usage)
-3. **Readability** (e.g., clear naming, structure, comments)
-4. **Best Practices** (e.g., idiomatic code, standards, security)
+---
 
-### Your Response Format:
-- Code Quality: X/10
-- Performance: X/10
-- Readability: X/10
-- Best Practices: X/10
+*Evaluation Report*
 
-Then write a short paragraph explaining the evaluation.
+### Code Quality  
+Evaluate if the code is clean, modular, and functional. Comment if it fulfills its purpose efficiently.
 
-After that, **optimize the code** to improve it. The optimized version should be:
-- More concise
-- More efficient
+### Performance  
+Comment on the performance, execution speed, and whether operations are optimized.
+
+### Readability  
+Discuss clarity in structure, variable naming, and ease of understanding.
+
+### Best Practices  
+Mention if the code follows standard practices, idiomatic style, and language-specific norms.
+
+*Score:*  
+- Code Quality: X/10  
+- Performance: X/10  
+- Readability: X/10  
+- Best Practices: X/10  
+
+---
+
+*Optimization*  
+Provide a more optimized version of the code. Make sure it is:
+
+- More concise  
+- More efficient  
 - Following best practices
+
+### Optimized Version  
+\`\`\`${language}
+// your improved version here
+\`\`\`
+
+*Explanation:*  
+Explain what changes you made and why they are beneficial.
+
+*Benefits:*  
+- Bullet point 1  
+- Bullet point 2  
+- Bullet point 3
+
+---
 
 ### Code to Evaluate:
 \`\`\`${language}
