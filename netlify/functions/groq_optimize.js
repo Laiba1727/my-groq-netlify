@@ -1,62 +1,63 @@
 const fetch = require("node-fetch");
 
+function extractJSON(text) {
+  // Attempt to extract JSON from between ``` or find first valid JSON object
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[1]);
+    } catch (e) {
+      console.error("Failed to parse extracted JSON block.");
+    }
+  }
+
+  // Try parsing raw content directly if no markdown block
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Direct JSON parse failed.");
+    return null;
+  }
+}
+
 exports.handler = async (event, context) => {
   try {
     const body = JSON.parse(event.body);
     const code = body.code || "";
     const language = body.language || "code";
+
     const prompt = `
 You are a professional senior developer.
 
-Evaluate the following ${language} code thoroughly and provide a structured **Evaluation Report** as follows:
+Evaluate the following ${language} code and return the result strictly in valid **JSON format only**, no markdown or extra explanation. Use this structure:
 
----
+{
+  "evaluation": {
+    "code_quality": {
+      "comment": "string",
+      "score": number
+    },
+    "performance": {
+      "comment": "string",
+      "score": number
+    },
+    "readability": {
+      "comment": "string",
+      "score": number
+    },
+    "best_practices": {
+      "comment": "string",
+      "score": number
+    }
+  },
+  "optimization": {
+    "optimized_code": "string",
+    "explanation": "string",
+    "benefits": ["string", "string", "string"]
+  }
+}
 
-*Evaluation Report*
-
-### Code Quality  
-Evaluate if the code is clean, modular, and functional. Comment if it fulfills its purpose efficiently.
-
-### Performance  
-Comment on the performance, execution speed, and whether operations are optimized.
-
-### Readability  
-Discuss clarity in structure, variable naming, and ease of understanding.
-
-### Best Practices  
-Mention if the code follows standard practices, idiomatic style, and language-specific norms.
-
-*Score:*  
-- Code Quality: X/10  
-- Performance: X/10  
-- Readability: X/10  
-- Best Practices: X/10  
-
----
-
-*Optimization*  
-Provide a more optimized version of the code. Make sure it is:
-
-- More concise  
-- More efficient  
-- Following best practices
-
-### Optimized Version  
-\`\`\`${language}
-// your improved version here
-\`\`\`
-
-*Explanation:*  
-Explain what changes you made and why they are beneficial.
-
-*Benefits:*  
-- Bullet point 1  
-- Bullet point 2  
-- Bullet point 3
-
----
-
-### Code to Evaluate:
+Code to evaluate:
 \`\`\`${language}
 ${code}
 \`\`\`
@@ -73,7 +74,7 @@ ${code}
         messages: [
           {
             role: "system",
-            content: "You are a professional developer who evaluates and improves code quality, performance, and readability."
+            content: "You are a professional developer who always responds in clean, parsable JSON without markdown or explanations."
           },
           {
             role: "user",
@@ -86,20 +87,26 @@ ${code}
     });
 
     const result = await response.json();
+    const content = result?.choices?.[0]?.message?.content || "{}";
 
-    console.log("Groq API response:", result);
+    const parsedJson = extractJSON(content);
 
-    const full_response = result?.choices?.[0]?.message?.content || "No output received from the model.";
+    if (!parsedJson) {
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Model did not return valid JSON." })
+      };
+    }
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ evaluation_and_optimization: full_response })
+      body: JSON.stringify(parsedJson)
     };
 
   } catch (err) {
     console.error("Error in groq_optimize function:", err);
-
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
