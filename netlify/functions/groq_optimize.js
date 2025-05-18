@@ -11,14 +11,14 @@ function extractJSON(text) {
     // Attempt to sanitize broken JSON and retry
     try {
       jsonString = jsonString
-        .replace(/\\n/g, "\\n")
+        .replace(/\\n/g, "\n")
         .replace(/\\'/g, "'")
         .replace(/\\"/g, '"')
         .replace(/\\&/g, "&")
-        .replace(/\\r/g, "\\r")
-        .replace(/\\t/g, "\\t")
-        .replace(/\\b/g, "\\b")
-        .replace(/\\f/g, "\\f");
+        .replace(/\\r/g, "\r")
+        .replace(/\\t/g, "\t")
+        .replace(/\\b/g, "\b")
+        .replace(/\\f/g, "\f");
 
       return JSON.parse(jsonString);
     } catch (err2) {
@@ -32,12 +32,12 @@ exports.handler = async (event, context) => {
   try {
     const body = JSON.parse(event.body);
     const code = body.code || "";
-    const language = body.language || "code";
+    const language = body.language || "javascript";
 
     const prompt = `
 You are a professional senior developer.
 
-Evaluate the following ${language} code and return the result strictly in valid JSON format only, with no markdown, no extra explanation, and no apologies. Always include the "optimized_code" field with properly escaped code. If the code is already optimal, repeat it in the "optimized_code" field.
+Evaluate the following ${language} code and return the result strictly in valid JSON format only, with no markdown, no extra explanation, and no apologies. Always include the "optimized_code" field with properly escaped **full runnable code**, including necessary imports and example usage if applicable. If the code is already optimal, repeat it in the "optimized_code" field.
 
 Use this structure exactly:
 
@@ -126,6 +126,5 @@ ${code}
     };
   }
 };
-
 
 
