@@ -1,14 +1,13 @@
 const fetch = require("node-fetch");
+const languageDetect = require("language-detect");
 
 function extractJSON(text) {
-  // Try to extract JSON from markdown block
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   let jsonString = jsonMatch ? jsonMatch[1] : text;
 
   try {
     return JSON.parse(jsonString);
   } catch (e) {
-    // Attempt to sanitize broken JSON and retry
     try {
       jsonString = jsonString
         .replace(/\\n/g, "\n")
@@ -19,7 +18,6 @@ function extractJSON(text) {
         .replace(/\\t/g, "\t")
         .replace(/\\b/g, "\b")
         .replace(/\\f/g, "\f");
-
       return JSON.parse(jsonString);
     } catch (err2) {
       console.error("Failed to sanitize and parse JSON:", err2);
@@ -28,11 +26,20 @@ function extractJSON(text) {
   }
 }
 
-exports.handler = async (event, context) => {
+function detectLanguage(code) {
+  try {
+    const lang = languageDetect.sync(code);
+    return lang || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+exports.handler = async function (event, context) {
   try {
     const body = JSON.parse(event.body);
     const code = body.code || "";
-    const language = body.language || "javascript";
+    const language = body.language || detectLanguage(code);
 
     const prompt = `
 You are a professional senior developer.
@@ -77,29 +84,29 @@ ${code}
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [
           {
             role: "system",
-            content: "You are a professional developer who always responds in clean, valid JSON only, with no markdown and no extra commentary."
+            content: "You are a professional developer who always responds in clean, valid JSON only, with no markdown and no extra commentary.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.3,
-        max_tokens: 1024
-      })
+        max_tokens: 1024,
+      }),
     });
 
     const result = await response.json();
     const content = result?.choices?.[0]?.message?.content || "{}";
 
-    console.log("Raw model output:", content); // Debugging line
+    console.log("Raw model output:", content);
 
     const parsedJson = extractJSON(content);
 
@@ -107,22 +114,21 @@ ${code}
       return {
         statusCode: 500,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Model did not return valid optimized_code or JSON structure." })
+        body: JSON.stringify({ error: "Model did not return valid optimized_code or JSON structure." }),
       };
     }
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(parsedJson)
+      body: JSON.stringify(parsedJson),
     };
-
   } catch (err) {
-    console.error("Error in groq_optimize function:", err);
+    console.error("Error in groqOptimize function:", err);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Something went wrong." })
+      body: JSON.stringify({ error: "Something went wrong." }),
     };
   }
 };
