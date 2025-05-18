@@ -1,5 +1,4 @@
 const fetch = require("node-fetch");
-const languageDetect = require("language-detect");
 
 function extractJSON(text) {
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -26,29 +25,24 @@ function extractJSON(text) {
   }
 }
 
-function detectLanguage(code) {
-  try {
-    const lang = languageDetect.sync(code);
-    return lang || "unknown";
-  } catch {
-    return "unknown";
-  }
-}
-
 exports.handler = async function (event, context) {
   try {
     const body = JSON.parse(event.body);
     const code = body.code || "";
-    const language = body.language || detectLanguage(code);
 
     const prompt = `
 You are a professional senior developer.
 
-Evaluate the following ${language} code and return the result strictly in valid JSON format only, with no markdown, no extra explanation, and no apologies. Always include the "optimized_code" field with properly escaped **full runnable code**, including necessary imports and example usage if applicable. If the code is already optimal, repeat it in the "optimized_code" field.
+First, detect the programming language of the following code snippet.
+
+Then, evaluate the code according to the detected language.
+
+Return the result strictly in valid JSON format only, with no markdown, no extra explanation, and no apologies. Always include the "optimized_code" field with properly escaped full runnable code, including necessary imports and example usage if applicable. If the code is already optimal, repeat it in the "optimized_code" field.
 
 Use this structure exactly:
 
 {
+  "detected_language": "string",
   "evaluation": {
     "code_quality": {
       "comment": "string",
@@ -75,7 +69,7 @@ Use this structure exactly:
 }
 
 Code to evaluate:
-\`\`\`${language}
+\`\`\`
 ${code}
 \`\`\`
 `;
@@ -110,11 +104,18 @@ ${code}
 
     const parsedJson = extractJSON(content);
 
-    if (!parsedJson || !parsedJson.optimization || !parsedJson.optimization.optimized_code) {
+    if (
+      !parsedJson ||
+      !parsedJson.optimization ||
+      !parsedJson.optimization.optimized_code ||
+      !parsedJson.detected_language
+    ) {
       return {
         statusCode: 500,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Model did not return valid optimized_code or JSON structure." }),
+        body: JSON.stringify({
+          error: "Model did not return valid optimized_code, detected_language, or JSON structure.",
+        }),
       };
     }
 
