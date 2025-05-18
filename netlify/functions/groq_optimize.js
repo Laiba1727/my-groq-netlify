@@ -1,22 +1,30 @@
 const fetch = require("node-fetch");
 
 function extractJSON(text) {
-  // Attempt to extract JSON from between ``` or find first valid JSON object
+  // Try to extract JSON from markdown block
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[1]);
-    } catch (e) {
-      console.error("Failed to parse extracted JSON block.");
-    }
-  }
+  let jsonString = jsonMatch ? jsonMatch[1] : text;
 
-  // Try parsing raw content directly if no markdown block
   try {
-    return JSON.parse(text);
+    return JSON.parse(jsonString);
   } catch (e) {
-    console.error("Direct JSON parse failed.");
-    return null;
+    // Attempt to sanitize broken JSON and retry
+    try {
+      jsonString = jsonString
+        .replace(/\\n/g, "\\n")
+        .replace(/\\'/g, "'")
+        .replace(/\\"/g, '"')
+        .replace(/\\&/g, "&")
+        .replace(/\\r/g, "\\r")
+        .replace(/\\t/g, "\\t")
+        .replace(/\\b/g, "\\b")
+        .replace(/\\f/g, "\\f");
+
+      return JSON.parse(jsonString);
+    } catch (err2) {
+      console.error("Failed to sanitize and parse JSON:", err2);
+      return null;
+    }
   }
 }
 
@@ -29,7 +37,9 @@ exports.handler = async (event, context) => {
     const prompt = `
 You are a professional senior developer.
 
-Evaluate the following ${language} code and return the result strictly in valid **JSON format only**, no markdown or extra explanation. Use this structure:
+Evaluate the following ${language} code and return the result strictly in valid JSON format only, with no markdown, no extra explanation, and no apologies. Always include the "optimized_code" field with properly escaped code. If the code is already optimal, repeat it in the "optimized_code" field.
+
+Use this structure exactly:
 
 {
   "evaluation": {
@@ -74,7 +84,7 @@ ${code}
         messages: [
           {
             role: "system",
-            content: "You are a professional developer who always responds in clean, parsable JSON without markdown or explanations."
+            content: "You are a professional developer who always responds in clean, valid JSON only, with no markdown and no extra commentary."
           },
           {
             role: "user",
@@ -89,13 +99,15 @@ ${code}
     const result = await response.json();
     const content = result?.choices?.[0]?.message?.content || "{}";
 
+    console.log("Raw model output:", content); // Debugging line
+
     const parsedJson = extractJSON(content);
 
-    if (!parsedJson) {
+    if (!parsedJson || !parsedJson.optimization || !parsedJson.optimization.optimized_code) {
       return {
         statusCode: 500,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Model did not return valid JSON." })
+        body: JSON.stringify({ error: "Model did not return valid optimized_code or JSON structure." })
       };
     }
 
